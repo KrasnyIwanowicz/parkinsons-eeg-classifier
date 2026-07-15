@@ -11,15 +11,11 @@ The dataset is NOT bundled with this repository — it's clinical EEG data
 and doesn't belong in git. Download it yourself before running anything:
 
     pip install openneuro-py
-    openneuro-py download --dataset ds002778 --target data/raw
-
-or via DataLad:
-
-    datalad install https://github.com/OpenNeuroDatasets/ds002778.git data/raw
-    cd data/raw && datalad get .
+    openneuro-py download --dataset ds002778 --target-dir data/raw
 
 This module then reads the resulting BIDS-formatted directory.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -44,18 +40,41 @@ class Subject:
 
 
 def load_participants_table(bids_root: Path) -> pd.DataFrame:
-    """Load participants.tsv and derive a binary PD/control label column."""
+    """Load participants.tsv and derive a binary PD/control label column.
+
+    NOTE: ds002778's participants.tsv has no "Group"/"diagnosis" column at
+    all — the label lives only in the participant_id prefix itself
+    ("sub-hc*" = healthy control, "sub-pd*" = Parkinson's). Verified
+    directly against the dataset's participants.tsv on GitHub.
+    """
     participants = pd.read_csv(bids_root / "participants.tsv", sep="\t")
-    # ds002778 encodes group as e.g. "PD" / "CTL" — the exact column name
-    # has varied slightly across dataset versions, so check both.
-    group_col = "Group" if "Group" in participants.columns else "group"
-    participants["label"] = (participants[group_col].str.upper() == "PD").astype(int)
+    participants["label"] = (
+        participants["participant_id"].str.contains("pd").astype(int)
+    )
     return participants
 
 
-def load_subject_raw(bids_root: Path, subject_id: str, task: str = "rest") -> "mne.io.Raw":
+def _infer_session(subject_id: str) -> str:
+    """ds002778 session naming: healthy controls were recorded once
+    (session "hc"); PD patients were recorded twice — off medication
+    ("off") and on medication ("on"). We default to "off" so the
+    PD-vs-control comparison isn't confounded by medication effects on
+    the EEG itself. Pass session= explicitly to load_subject_raw if you
+    want the "on" condition instead (e.g. for a separate on/off analysis)."""
+    if subject_id.startswith("hc"):
+        return "hc"
+    if subject_id.startswith("pd"):
+        return "off"
+    raise ValueError(f"Unrecognized subject id prefix: {subject_id!r}")
+
+
+def load_subject_raw(
+    bids_root: Path, subject_id: str, task: str = "rest", session: str | None = None
+) -> "mne.io.Raw":
     """Load a single subject's raw EEG recording via MNE-BIDS."""
-    bids_path = BIDSPath(subject=subject_id, task=task, root=bids_root)
+    if session is None:
+        session = _infer_session(subject_id)
+    bids_path = BIDSPath(subject=subject_id, session=session, task=task, root=bids_root)
     return read_raw_bids(bids_path, verbose=False)
 
 
@@ -75,7 +94,12 @@ def load_dataset(bids_root: str | Path, task: str = "rest") -> list[Subject]:
         sub_id = str(row["participant_id"]).replace("sub-", "")
         try:
             raw = load_subject_raw(bids_root, sub_id, task=task)
-        except FileNotFoundError:
-            continue  # some public releases have partial coverage
+        except Exception as exc:  # noqa: BLE001 — deliberately broad
+            # A couple of subjects in this dataset ship as preprocessed
+            # .mat files instead of raw BIDS EEG for one condition; skip
+            # anything that fails to load rather than crashing the whole
+            # run, but say so loudly so it isn't silently swept away.
+            print(f"[load_dataset] skipping sub-{sub_id}: {exc}")
+            continue
         subjects.append(Subject(subject_id=sub_id, label=int(row["label"]), raw=raw))
     return subjects

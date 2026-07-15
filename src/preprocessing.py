@@ -2,6 +2,7 @@
 EEG preprocessing pipeline: band-pass + notch filtering, average
 referencing, ICA-based artifact removal, and fixed-length epoching.
 """
+
 from __future__ import annotations
 
 import mne
@@ -30,21 +31,22 @@ def preprocess_raw(
     ica.fit(raw, verbose=False)
 
     # ds002778 has no dedicated EOG channel, so frontal electrodes (Fp1/Fp2)
-    # are used as an eye-blink proxy. Inspect ica.plot_components() /
-    # ica.plot_sources() manually the first few times — don't trust this
-    # heuristic blindly on a new dataset or montage.
-    if _has_eog_proxy(raw):
-        eog_indices, _ = ica.find_bads_eog(raw, verbose=False)
+    # are used as an eye-blink proxy. find_bads_eog() only auto-detects
+    # channels of actual type 'eog' — Fp1/Fp2 are still type 'eeg' here, so
+    # ch_name must be passed explicitly or it raises "No EOG channel(s) found".
+    # Inspect ica.plot_components()/ica.plot_sources() manually the first
+    # few times — don't trust this heuristic blindly on a new dataset.
+    proxy_channels = [ch for ch in ("Fp1", "Fp2") if ch in raw.ch_names]
+    if proxy_channels:
+        eog_indices, _ = ica.find_bads_eog(raw, ch_name=proxy_channels, verbose=False)
         ica.exclude = eog_indices
 
     return ica.apply(raw.copy(), verbose=False)
 
 
-def _has_eog_proxy(raw: "mne.io.Raw") -> bool:
-    return any(ch in raw.ch_names for ch in ("Fp1", "Fp2"))
-
-
-def make_epochs(raw: "mne.io.Raw", duration: float = 2.0, overlap: float = 0.0) -> "mne.Epochs":
+def make_epochs(
+    raw: "mne.io.Raw", duration: float = 2.0, overlap: float = 0.0
+) -> "mne.Epochs":
     """Cut a continuous resting-state recording into fixed-length epochs."""
     events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
     return mne.Epochs(

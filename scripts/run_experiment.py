@@ -6,6 +6,7 @@ End-to-end experiment runner:
 Usage:
     python scripts/run_experiment.py --bids-root data/raw --config configs/default.yaml
 """
+
 from __future__ import annotations
 
 import argparse
@@ -26,7 +27,9 @@ from src.preprocessing import make_epochs, preprocess_raw
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bids-root", required=True, help="Path to the downloaded BIDS dataset")
+    parser.add_argument(
+        "--bids-root", required=True, help="Path to the downloaded BIDS dataset"
+    )
     parser.add_argument("--config", default="configs/default.yaml")
     args = parser.parse_args()
 
@@ -63,10 +66,15 @@ def main() -> None:
     results = loso_cross_validate(
         lambda: build_baseline_pipeline(cfg["model"]["pca_components"]), X, y, groups
     )
-    print(f"Mean accuracy: {results['mean_accuracy']:.3f}")
-    if results["mean_auc"] is not None:
-        print(f"Mean ROC-AUC: {results['mean_auc']:.3f}")
-    print("Confusion matrix:\n", results["confusion_matrix"])
+    print(f"Epoch-level mean accuracy: {results['mean_epoch_accuracy']:.3f}")
+    if results["epoch_auc"] is not None:
+        print(f"Epoch-level ROC-AUC (pooled out-of-fold): {results['epoch_auc']:.3f}")
+    print("Epoch-level confusion matrix:\n", results["epoch_confusion_matrix"])
+    print(
+        f"\nSubject-level accuracy (majority vote, n={results['n_subjects']}): "
+        f"{results['subject_accuracy']:.3f}"
+    )
+    print("Subject-level confusion matrix:\n", results["subject_confusion_matrix"])
 
 
 if __name__ == "__main__":
