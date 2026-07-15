@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Data (EEG recordings are large and shouldn't live in git)
+data/raw/
+data/processed/
+*.fif
+*.edf
+*.set
+*.bdf
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Results (regenerate these, don't commit them)
+results/*.png
+results/*.csv
+results/*.json
+!results/.gitkeep
+!data/.gitkeep

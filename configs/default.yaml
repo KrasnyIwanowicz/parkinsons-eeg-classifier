@@ -1,0 +1,22 @@
+seed: 42
+
+paths:
+  bids_root: data/raw
+  processed_dir: data/processed
+  results_dir: results
+
+preprocessing:
+  l_freq: 1.0          # high-pass, Hz
+  h_freq: 45.0          # low-pass, Hz
+  notch_freq: 50.0      # mains frequency (50 Hz in Poland/EU; use 60.0 for US data)
+  n_ica_components: 15
+  epoch_duration: 2.0   # seconds
+  epoch_overlap: 0.0    # seconds
+
+model:
+  pca_components: 10
+  lstm_hidden_dim: 64
+  lstm_num_layers: 1
+
+evaluation:
+  cv_strategy: leave_one_subject_out
