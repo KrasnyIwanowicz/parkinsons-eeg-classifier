@@ -55,7 +55,16 @@ def main() -> None:
         "--max-folds", type=int, default=None,
         help="Only run this many LOSO folds — for a quick sanity check before the full run.",
     )
+    parser.add_argument(
+        "--seed", type=int, default=42,
+        help="Random seed for weight init and training-order shuffling. Fixed by default "
+             "so results are reproducible — without this, results can swing substantially "
+             "run to run on a dataset this small.",
+    )
     args = parser.parse_args()
+
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
 
     with open(args.config) as f:
         cfg = yaml.safe_load(f)

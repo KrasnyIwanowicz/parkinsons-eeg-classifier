@@ -144,26 +144,28 @@ pytest tests/ -v
 
 ## Results
 
-**Baseline (StandardScaler → PCA → SVM), leave-one-subject-out CV, n = 31:**
+**Baseline (StandardScaler → PCA → SVM), leave-one-subject-out CV, n = 31,
+32 scalp EEG channels:**
 
 | Level | Accuracy | ROC-AUC | Confusion matrix |
 |---|---|---|---|
-| Epoch-level (n = 3009 epochs) | 0.607 | 0.653 | `[[773, 747], [439, 1050]]` |
-| **Subject-level** (majority vote, n = 31) | **0.677** | — | `[[10, 6], [4, 11]]` |
+| Epoch-level (n = 3009 epochs) | 0.645 | 0.661 | `[[965, 555], [534, 955]]` |
+| **Subject-level** (majority vote, n = 31) | **0.645** | — | `[[10, 6], [5, 10]]` |
 
-Subject-level: 10/16 controls and 11/15 PD subjects correctly classified
-(62.5% specificity, 73.3% sensitivity). Majority-voting across each
-subject's epochs measurably smooths out epoch-level noise (67.7% vs.
-60.7%), which is the expected effect of subject-level aggregation.
+Subject-level: 10/16 controls and 10/15 PD subjects correctly classified
+(62.5% specificity, 66.7% sensitivity). An AUC of ~0.66 under honest
+LOSO validation on n = 31 is a modest but real result — not evidence of
+anything close to diagnostic reliability (see the Limitations section
+and the dataset curators' own caveat above), but a legitimate signal
+that survived a validation scheme designed specifically not to flatter
+it.
 
-An AUC of ~0.65 under honest LOSO validation on n = 31 is a modest but
-real result — not evidence of anything close to diagnostic reliability
-(see the Limitations section and the dataset curators' own caveat
-above), but a legitimate signal that survived a validation scheme
-designed specifically not to flatter it.
-
-*Deep model (LSTM / Attention-LSTM) results: pending — see
-[docs/roadmap.md](docs/roadmap.md), Phase 2.*
+*Deep model (LSTM / Attention-LSTM) results: pending a stable seeded
+run — see [docs/roadmap.md](docs/roadmap.md), Phase 2. Early runs
+surfaced two real bugs (a channel-selection bug that included 9
+non-scalp channels in every feature vector, and unseeded training
+causing results to swing substantially run-to-run on this small a
+dataset) before either model's number can be trusted.*
 
 ## Limitations
 
