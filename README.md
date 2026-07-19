@@ -1,6 +1,6 @@
 # Parkinson's Disease Detection from Resting-State EEG
 
-[![CI](https://github.com/KrasnyIwanowicz/parkinsons-eeg-classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/KrasnyIwanowicz/parkinsons-eeg-classifier/actions/workflows/ci.yml)
+[![CI](https://github.com/YOUR_USERNAME/parkinsons-eeg-classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/parkinsons-eeg-classifier/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -43,12 +43,40 @@ Disease** — [OpenNeuro ds002778](https://openneuro.org/datasets/ds002778)
 > with Parkinson's Disease. OpenNeuro. Dataset.
 > https://doi.org/10.18112/openneuro.ds002778.v1.0.5
 
+**Structure, as actually shipped** (verified against the dataset repo,
+not assumed): there is no "Group" column in `participants.tsv` — the
+label lives in the subject ID prefix itself (`sub-hc*` = control,
+`sub-pd*` = PD). Healthy controls have a single session (`ses-hc`); PD
+patients have **two** sessions, off-medication (`ses-off`) and
+on-medication (`ses-on`). This repo's loader defaults to the
+off-medication session for the PD-vs-control comparison, so medication
+state doesn't confound the group difference. Raw EEG ships as `.bdf`.
+
+**⚠️ A note from the dataset's own maintainers, verbatim from their
+README, that matters a lot for how you frame any results here:**
+> "An example of an analysis that we could consider problematic ... would
+> be using machine learning to classify Parkinson's patients from
+> healthy controls using this dataset. This is because there are far
+> too few patients for proper statistics... We strongly advise against
+> using any such approach because it would mislead patients and people
+> who are interested in knowing if they have Parkinson's disease."
+>
+> — Alex Rockhill (University of Oregon), dataset curator
+
+This project still builds the classifier — that's the point of the
+exercise — but treat it explicitly as a **methods/engineering
+demonstration** (feature pipeline, validation rigor, explainability),
+never as a diagnostic claim, and say so plainly wherever results are
+reported. If this project is ever written up for anything more formal
+than a portfolio (a paper, a competition submission), the dataset's
+README asks that you email the curator first: arockhil@uoregon.edu.
+
 The data is **not** included in this repository (clinical EEG data,
 and large enough that it doesn't belong in git). To get it:
 
 ```bash
 pip install openneuro-py
-openneuro-py download --dataset ds002778 --target data/raw
+openneuro-py download --dataset ds002778 --target-dir data/raw
 ```
 
 ## Methodology
@@ -97,7 +125,7 @@ two independent ways of answering "what drove this prediction?"
 ## Setup
 
 ```bash
-git clone https://github.com/KrasnyIwanowicz/parkinsons-eeg-classifier.git
+git clone https://github.com/YOUR_USERNAME/parkinsons-eeg-classifier.git
 cd parkinsons-eeg-classifier
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
@@ -117,22 +145,42 @@ pytest tests/ -v
 
 ## Results
 
-*To be filled in as experiments are run — see [docs/roadmap.md](docs/roadmap.md)
-for what's done and what's next. Deliberately left empty rather than
-filled with placeholder numbers.*
+**Baseline (StandardScaler → PCA → SVM), leave-one-subject-out CV, n = 31:**
 
-| Model | Accuracy (LOSO) | ROC-AUC (LOSO) |
-|---|---|---|
-| SVM baseline | — | — |
-| LSTM | — | — |
-| Attention-LSTM | — | — |
+| Level | Accuracy | ROC-AUC | Confusion matrix |
+|---|---|---|---|
+| Epoch-level (n = 3009 epochs) | 0.607 | 0.653 | `[[773, 747], [439, 1050]]` |
+| **Subject-level** (majority vote, n = 31) | **0.677** | — | `[[10, 6], [4, 11]]` |
+
+Subject-level: 10/16 controls and 11/15 PD subjects correctly classified
+(62.5% specificity, 73.3% sensitivity). Majority-voting across each
+subject's epochs measurably smooths out epoch-level noise (67.7% vs.
+60.7%), which is the expected effect of subject-level aggregation.
+
+An AUC of ~0.65 under honest LOSO validation on n = 31 is a modest but
+real result — not evidence of anything close to diagnostic reliability
+(see the Limitations section and the dataset curators' own caveat
+above), but a legitimate signal that survived a validation scheme
+designed specifically not to flatter it.
+
+*Deep model (LSTM / Attention-LSTM) results: pending — see
+[docs/roadmap.md](docs/roadmap.md), Phase 2.*
 
 ## Limitations
 
-- n = 31 is a small sample even by EEG standards — treat any result
-  here as a proof of concept, not a clinical claim.
+- **n = 31 (15 PD, 16 control) is too small for statistically reliable
+  diagnostic claims — the dataset's own curators say so explicitly**
+  (see the callout above). With leave-one-subject-out CV, every subject
+  is tested exactly once, which is a fairer evaluation than a single
+  fixed train/test split, but it does not fix the fundamental
+  small-sample problem. Treat any accuracy/AUC number this project
+  produces as an engineering proof-of-concept, not evidence of
+  real-world diagnostic validity.
 - Single-site, single-recording-protocol data; nothing here has been
   validated on an independent cohort or a different EEG system.
+- UPDRS-style clinical ratings referenced in the dataset were collected
+  by trained lab personnel, not a board-certified neurologist — treat
+  any analysis leaning on disease-severity labels with extra caution.
 - Not intended for, and not validated for, actual clinical diagnostic
   use.
 
@@ -140,9 +188,21 @@ filled with placeholder numbers.*
 
 - Swann, N.C. (2021). UC San Diego Resting State EEG Data from Patients
   with Parkinson's Disease. OpenNeuro. https://doi.org/10.18112/openneuro.ds002778.v1.0.5
+- Jackson, N., Cole, S.R., Voytek, B., Swann, N.C. (2019). Characteristics
+  of Waveform Shape in Parkinson's Disease Detected with Scalp
+  Electroencephalography. *eNeuro*, 6(3). https://doi.org/10.1523/ENEURO.0151-19.2019
+- Swann, N.C. et al. (2015). Elevated synchrony in Parkinson disease
+  detected with electroencephalography. *Ann Neurol*, 78(5), 742-750.
 - Delorme, A. & Makeig, S. (2004). EEGLAB: an open-source toolbox for
   analysis of single-trial EEG dynamics. *Journal of Neuroscience
   Methods*, 134, 9–21.
+- Appelhoff, S. et al. (2019). MNE-BIDS: Organizing electrophysiological
+  data into the BIDS format. *JOSS*, 4(44), 1896.
+
+*If you ever submit anything based on this dataset for formal
+publication (not just a portfolio/school project), the dataset
+maintainers ask to be emailed first — see the callout in the Dataset
+section above.*
 
 ## License
 

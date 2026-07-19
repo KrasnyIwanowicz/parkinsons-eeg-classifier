@@ -19,7 +19,6 @@ hitting them on real data):
    other. Per-subject accuracy (majority vote across that subject's
    epochs) is the more honest, more clinically meaningful number.
 """
-
 from __future__ import annotations
 
 import numpy as np
@@ -27,9 +26,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score
 from sklearn.model_selection import LeaveOneGroupOut
 
 
-def loso_cross_validate(
-    model_builder, X: np.ndarray, y: np.ndarray, groups: np.ndarray
-) -> dict:
+def loso_cross_validate(model_builder, X: np.ndarray, y: np.ndarray, groups: np.ndarray) -> dict:
     """Run LOSO CV.
 
     Parameters
@@ -93,8 +90,6 @@ def loso_cross_validate(
         "epoch_auc": epoch_auc,
         "epoch_confusion_matrix": epoch_cm,
         "subject_accuracy": accuracy_score(subject_true, subject_pred),
-        "subject_confusion_matrix": confusion_matrix(
-            subject_true, subject_pred, labels=[0, 1]
-        ),
+        "subject_confusion_matrix": confusion_matrix(subject_true, subject_pred, labels=[0, 1]),
         "n_subjects": len(subject_true),
     }

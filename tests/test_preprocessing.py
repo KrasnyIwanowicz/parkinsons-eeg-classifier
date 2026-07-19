@@ -3,7 +3,6 @@ Tests run on a synthetic MNE Raw object (random data, fake channel names)
 so CI never needs to download the real ~2 GB clinical EEG dataset just to
 check that the pipeline doesn't crash.
 """
-
 import mne
 import numpy as np
 

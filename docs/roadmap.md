@@ -4,10 +4,12 @@ A long-term project needs visible checkpoints — this is as much for you
 as for anyone reviewing the repo.
 
 ## Phase 1 — Foundation
-- [ ] Download ds002778, verify it loads via `src/data_loading.py`
-- [ ] Run `preprocess_raw` + `make_epochs` on a couple of subjects, sanity-check by eye (plot raw vs. cleaned)
-- [ ] Extract features for the full dataset, save to `data/processed/`
-- [ ] Get the baseline (StandardScaler → PCA → SVM) running end-to-end via `scripts/run_experiment.py`
+- [x] Download ds002778, verify it loads via `src/data_loading.py`
+- [x] Run `preprocess_raw` + `make_epochs` on a couple of subjects, sanity-check by eye (plot raw vs. cleaned)
+- [x] Extract features for the full dataset, save to `data/processed/`
+- [x] Get the baseline (StandardScaler → PCA → SVM) running end-to-end via `scripts/run_experiment.py`
+
+**Result: 67.7% subject-level accuracy, AUC 0.653, LOSO-validated (n=31).**
 
 ## Phase 2 — Deep models + real validation
 - [ ] Implement a PyTorch `Dataset`/`DataLoader` around the per-subject epoch sequences

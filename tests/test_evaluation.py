@@ -2,7 +2,6 @@
 Tests for loso_cross_validate using a small synthetic, separable dataset
 — fast, deterministic, and no real EEG data needed.
 """
-
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 
@@ -31,13 +30,9 @@ def test_loso_cross_validate_returns_expected_keys():
     results = loso_cross_validate(lambda: LogisticRegression(), X, y, groups)
 
     expected_keys = {
-        "fold_accuracy",
-        "mean_epoch_accuracy",
-        "epoch_auc",
-        "epoch_confusion_matrix",
-        "subject_accuracy",
-        "subject_confusion_matrix",
-        "n_subjects",
+        "fold_accuracy", "mean_epoch_accuracy", "epoch_auc",
+        "epoch_confusion_matrix", "subject_accuracy",
+        "subject_confusion_matrix", "n_subjects",
     }
     assert expected_keys.issubset(results.keys())
     assert results["n_subjects"] == 4

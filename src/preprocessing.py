@@ -2,7 +2,6 @@
 EEG preprocessing pipeline: band-pass + notch filtering, average
 referencing, ICA-based artifact removal, and fixed-length epoching.
 """
-
 from __future__ import annotations
 
 import mne
@@ -44,9 +43,7 @@ def preprocess_raw(
     return ica.apply(raw.copy(), verbose=False)
 
 
-def make_epochs(
-    raw: "mne.io.Raw", duration: float = 2.0, overlap: float = 0.0
-) -> "mne.Epochs":
+def make_epochs(raw: "mne.io.Raw", duration: float = 2.0, overlap: float = 0.0) -> "mne.Epochs":
     """Cut a continuous resting-state recording into fixed-length epochs."""
     events = mne.make_fixed_length_events(raw, duration=duration, overlap=overlap)
     return mne.Epochs(

@@ -31,16 +31,22 @@ try:
 
     class LSTMClassifier(nn.Module):
         """LSTM over a sequence of per-epoch feature vectors; final
-        hidden state feeds a linear classifier."""
+        hidden state feeds a linear classifier. Dropout before the
+        classifier head matters more than usual here — with ~30 training
+        subjects per LOSO fold, overfitting is the default outcome
+        without it."""
 
-        def __init__(self, input_dim: int, hidden_dim: int = 64, num_layers: int = 1):
+        def __init__(
+            self, input_dim: int, hidden_dim: int = 64, num_layers: int = 1, dropout: float = 0.3
+        ):
             super().__init__()
             self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, batch_first=True)
+            self.dropout = nn.Dropout(dropout)
             self.classifier = nn.Linear(hidden_dim, 1)
 
         def forward(self, x):  # x: (batch, seq_len, input_dim)
             _, (h_n, _) = self.lstm(x)
-            return self.classifier(h_n[-1]).squeeze(-1)
+            return self.classifier(self.dropout(h_n[-1])).squeeze(-1)
 
     class AttentionLSTMClassifier(nn.Module):
         """LSTM with additive (Bahdanau-style) attention over hidden
@@ -48,10 +54,11 @@ try:
         a built-in explainability signal: they show which time windows
         in the sequence drove the prediction."""
 
-        def __init__(self, input_dim: int, hidden_dim: int = 64):
+        def __init__(self, input_dim: int, hidden_dim: int = 64, dropout: float = 0.3):
             super().__init__()
             self.lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True)
             self.attn_score = nn.Linear(hidden_dim, 1)
+            self.dropout = nn.Dropout(dropout)
             self.classifier = nn.Linear(hidden_dim, 1)
 
         def forward(self, x, return_attention: bool = False):
@@ -59,7 +66,7 @@ try:
             scores = self.attn_score(outputs).squeeze(-1)  # (batch, seq_len)
             weights = torch.softmax(scores, dim=-1)
             context = torch.sum(outputs * weights.unsqueeze(-1), dim=1)
-            logits = self.classifier(context).squeeze(-1)
+            logits = self.classifier(self.dropout(context)).squeeze(-1)
             return (logits, weights) if return_attention else logits
 
 except ImportError:  # pragma: no cover

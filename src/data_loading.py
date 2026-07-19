@@ -11,11 +11,15 @@ The dataset is NOT bundled with this repository — it's clinical EEG data
 and doesn't belong in git. Download it yourself before running anything:
 
     pip install openneuro-py
-    openneuro-py download --dataset ds002778 --target-dir data/raw
+    openneuro-py download --dataset ds002778 --target data/raw
+
+or via DataLad:
+
+    datalad install https://github.com/OpenNeuroDatasets/ds002778.git data/raw
+    cd data/raw && datalad get .
 
 This module then reads the resulting BIDS-formatted directory.
 """
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -48,9 +52,7 @@ def load_participants_table(bids_root: Path) -> pd.DataFrame:
     directly against the dataset's participants.tsv on GitHub.
     """
     participants = pd.read_csv(bids_root / "participants.tsv", sep="\t")
-    participants["label"] = (
-        participants["participant_id"].str.contains("pd").astype(int)
-    )
+    participants["label"] = participants["participant_id"].str.contains("pd").astype(int)
     return participants
 
 
