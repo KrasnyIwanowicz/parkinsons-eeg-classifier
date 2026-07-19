@@ -73,11 +73,27 @@ def _infer_session(subject_id: str) -> str:
 def load_subject_raw(
     bids_root: Path, subject_id: str, task: str = "rest", session: str | None = None
 ) -> "mne.io.Raw":
-    """Load a single subject's raw EEG recording via MNE-BIDS."""
+    """Load a single subject's raw EEG recording via MNE-BIDS, restricted
+    to the 32 scalp EEG channels.
+
+    ds002778's raw files carry 41 channels, not 32: 32 named scalp
+    electrodes (Fp1...Cz) plus 8 BioSemi "EXG" auxiliary channels
+    (references/EOG-adjacent, not part of the scalp montage) and one
+    "Status" trigger/event-code channel — not physiological signal at
+    all. Verified directly against a loaded subject's raw.ch_names.
+    Without this, feature extraction was silently running on all 41
+    "channels" instead of the intended 32, for every model so far.
+    """
     if session is None:
         session = _infer_session(subject_id)
     bids_path = BIDSPath(subject=subject_id, session=session, task=task, root=bids_root)
-    return read_raw_bids(bids_path, verbose=False)
+    raw = read_raw_bids(bids_path, verbose=False)
+
+    non_scalp = ["Status"] + [f"EXG{i}" for i in range(1, 9)]
+    to_drop = [ch for ch in non_scalp if ch in raw.ch_names]
+    if to_drop:
+        raw.drop_channels(to_drop)
+    return raw
 
 
 def load_dataset(bids_root: str | Path, task: str = "rest") -> list[Subject]:
