@@ -44,6 +44,14 @@ def main() -> None:
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--n-train-epochs", type=int, default=30)
     parser.add_argument(
+        "--hidden-dim", type=int, default=None,
+        help="Overrides configs/default.yaml's model.lstm_hidden_dim if set.",
+    )
+    parser.add_argument(
+        "--dropout", type=float, default=0.3,
+        help="Dropout before the final classifier layer.",
+    )
+    parser.add_argument(
         "--max-folds", type=int, default=None,
         help="Only run this many LOSO folds — for a quick sanity check before the full run.",
     )
@@ -63,7 +71,7 @@ def main() -> None:
     print(f"Built {len(sequences)} subject sequences, feature dim = {input_dim}")
 
     model_cls = LSTMClassifier if args.model == "lstm" else AttentionLSTMClassifier
-    hidden_dim = cfg["model"]["lstm_hidden_dim"]
+    hidden_dim = args.hidden_dim if args.hidden_dim is not None else cfg["model"]["lstm_hidden_dim"]
 
     subject_ids = np.array([s["subject_id"] for s in sequences])
     labels = np.array([s["label"] for s in sequences])
@@ -82,7 +90,7 @@ def main() -> None:
         test_sequence = sequences[test_idx[0]]
         train_sequences, test_sequence = standardize_sequences(train_sequences, test_sequence)
 
-        model = model_cls(input_dim=input_dim, hidden_dim=hidden_dim).to(device)
+        model = model_cls(input_dim=input_dim, hidden_dim=hidden_dim, dropout=args.dropout).to(device)
         model = train_one_fold(
             model, train_sequences, args.lr, args.weight_decay, args.n_train_epochs, device
         )

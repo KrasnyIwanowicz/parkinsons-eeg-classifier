@@ -5,9 +5,31 @@ in src/ — the script itself is just CLI plumbing around this.
 """
 from __future__ import annotations
 
+import random
+
 import numpy as np
 import torch
 import torch.nn as nn
+
+
+def set_seed(seed: int) -> None:
+    """Seed every RNG that affects a training run: PyTorch's model
+    initialization, the training-order shuffle (numpy), and Python's
+    stdlib random for anything that touches it indirectly.
+
+    This matters more than it sounds like it should. Without it, two
+    runs of the exact same fold — same data, same hyperparameters —
+    produce wildly different predictions purely from random weight
+    initialization. That's not hypothetical: it's what actually happened
+    on the real dataset before this function existed (see the Phase 2
+    notes in docs/roadmap.md). A single seed makes results reproducible;
+    it does not by itself make the estimate low-variance, which is why
+    scripts/train_deep_model.py averages over several seeds per fold
+    rather than trusting any one of them alone.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 
 def standardize_sequences(train_sequences: list[dict], test_sequence: dict) -> tuple[list[dict], dict]:
