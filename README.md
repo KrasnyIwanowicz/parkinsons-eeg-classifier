@@ -1,10 +1,9 @@
 # Parkinson's Disease Detection from Resting-State EEG
 
-[![CI](https://github.com/YOUR_USERNAME/parkinsons-eeg-classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/parkinsons-eeg-classifier/actions/workflows/ci.yml)
+[![CI](https://github.com/KrasnyIwanowicz/parkinsons-eeg-classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/KrasnyIwanowicz/parkinsons-eeg-classifier/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> Replace `YOUR_USERNAME` above with your actual GitHub username once you push this.
 
 ## Overview
 
