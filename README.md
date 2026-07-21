@@ -1,9 +1,10 @@
 # Parkinson's Disease Detection from Resting-State EEG
 
-[![CI](https://github.com/KrasnyIwanowicz/parkinsons-eeg-classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/KrasnyIwanowicz/parkinsons-eeg-classifier/actions/workflows/ci.yml)
+[![CI](https://github.com/YOUR_USERNAME/parkinsons-eeg-classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/parkinsons-eeg-classifier/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+> Replace `YOUR_USERNAME` above with your actual GitHub username once you push this.
 
 ## Overview
 
@@ -160,12 +161,30 @@ and the dataset curators' own caveat above), but a legitimate signal
 that survived a validation scheme designed specifically not to flatter
 it.
 
-*Deep model (LSTM / Attention-LSTM) results: pending a stable seeded
-run — see [docs/roadmap.md](docs/roadmap.md), Phase 2. Early runs
-surfaced two real bugs (a channel-selection bug that included 9
-non-scalp channels in every feature vector, and unseeded training
-causing results to swing substantially run-to-run on this small a
-dataset) before either model's number can be trusted.*
+*Deep model (LSTM / Attention-LSTM) results:*
+
+| Model | Accuracy (subject-level, n=31) | ROC-AUC |
+|---|---|---|
+| SVM baseline (deterministic) | **0.645** | **0.661** |
+| LSTM (mean ± SD, 3 seeds) | 0.516 ± 0.055 | 0.528 ± 0.079 |
+| Attention-LSTM (mean ± SD, 3 seeds) | 0.538 ± 0.049 | 0.514 ± 0.012 |
+
+**The classical baseline clearly outperforms both deep sequence
+models, which sit essentially at chance (0.50) even after fixing every
+bug that surfaced along the way** — a channel-selection bug that
+included 9 non-scalp channels in every feature vector, unseeded
+training causing results to swing arbitrarily between runs, and severe
+overfitting from too much model capacity for the data available. Once
+all three were fixed and results were averaged across 3 random seeds
+per model, the conclusion held steady: with only 31 subjects, there
+isn't enough data for an LSTM to learn anything an SVM on hand-crafted
+spectral/Hjorth features doesn't already capture. This is a legitimate
+finding, not a failure — reporting "the simple model won, honestly
+evaluated" is more credible than chasing a bigger number with a
+methodology that doesn't hold up. A fourth architecture (EEGNet) was
+considered but skipped: it's unlikely a different deep model changes a
+conclusion that's fundamentally about sample size, not architecture
+choice.
 
 ## Limitations
 

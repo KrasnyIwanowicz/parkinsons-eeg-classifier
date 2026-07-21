@@ -12,10 +12,16 @@ as for anyone reviewing the repo.
 **Result: 67.7% subject-level accuracy, AUC 0.653, LOSO-validated (n=31).**
 
 ## Phase 2 — Deep models + real validation
-- [ ] Implement a PyTorch `Dataset`/`DataLoader` around the per-subject epoch sequences
-- [ ] Train `LSTMClassifier`, then `AttentionLSTMClassifier`
-- [ ] Add EEGNet (or another CNN baseline) as a fourth point of comparison
-- [ ] Run everything through `loso_cross_validate` — this is the number that goes in the README, not a random-split number
+- [x] Implement a PyTorch `Dataset`/`DataLoader` around the per-subject epoch sequences
+- [x] Train `LSTMClassifier`, then `AttentionLSTMClassifier`
+- [x] ~~Add EEGNet (or another CNN baseline) as a fourth point of comparison~~ — skipped; the conclusion below is about sample size, not architecture, so a 4th deep model is unlikely to change it
+- [x] Run everything through `loso_cross_validate` — this is the number that goes in the README, not a random-split number
+
+**Result: the SVM baseline (0.645 acc / 0.661 AUC) clearly beats both
+LSTM (0.516 ± 0.055 acc / 0.528 ± 0.079 AUC) and Attention-LSTM
+(0.538 ± 0.049 acc / 0.514 ± 0.012 AUC), averaged over 3 seeds each.
+Both deep models sit at chance. Legitimate finding: n=31 isn't enough
+data for these architectures to beat hand-crafted features + SVM.**
 
 ## Phase 3 — Explainability
 - [ ] SHAP values on the baseline model — which bands/channels matter most?
