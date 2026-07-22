@@ -124,7 +124,7 @@ two independent ways of answering "what drove this prediction?"
 ## Setup
 
 ```bash
-git clone https://github.com/KrasnyIwanowicz/parkinsons-eeg-classifier.git
+git clone https://github.com/YOUR_USERNAME/parkinsons-eeg-classifier.git
 cd parkinsons-eeg-classifier
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
@@ -144,55 +144,81 @@ pytest tests/ -v
 
 ## Results
 
-> **⚠️ Numbers below are pending a final re-run.** SHAP analysis
-> (Phase 3) uncovered a real bug in `extract_features`: band power and
-> Hjorth activity are right-skewed, outlier-dominated distributions
-> that were wrecking `StandardScaler`'s scaling — a few high-power
-> epochs were crushing normal epoch-to-epoch variation into a sliver of
-> the standardized range. Now fixed with a log-transform (see
-> `src/features.py`). Since every model uses this feature extraction,
-> all numbers below are stale until re-run on the corrected features.
-
-**Baseline (StandardScaler → PCA → SVM), leave-one-subject-out CV, n = 31,
-32 scalp EEG channels:**
+**Baseline (StandardScaler → PCA(10) → SVM), leave-one-subject-out CV,
+n = 31, 32 scalp EEG channels, log-scaled power features:**
 
 | Level | Accuracy | ROC-AUC | Confusion matrix |
 |---|---|---|---|
-| Epoch-level (n = 3009 epochs) | 0.645 | 0.661 | `[[965, 555], [534, 955]]` |
-| **Subject-level** (majority vote, n = 31) | **0.645** | — | `[[10, 6], [5, 10]]` |
+| Epoch-level (n = 3009 epochs) | 0.593 | 0.580 | `[[808, 712], [516, 973]]` |
+| **Subject-level** (majority vote, n = 31) | **0.581** | **0.580** | `[[8, 8], [5, 10]]` |
 
-Subject-level: 10/16 controls and 10/15 PD subjects correctly classified
-(62.5% specificity, 66.7% sensitivity). An AUC of ~0.66 under honest
-LOSO validation on n = 31 is a modest but real result — not evidence of
-anything close to diagnostic reliability (see the Limitations section
-and the dataset curators' own caveat above), but a legitimate signal
-that survived a validation scheme designed specifically not to flatter
-it.
+PCA(10) was checked against skipping PCA entirely and against 30/50
+components — none beat it (skipping PCA entirely actually dropped
+accuracy below chance, 0.419, since 256 raw features through an
+RBF-kernel SVM with ~30 training subjects per fold is exactly the
+regime where PCA provides real regularization, not just an arbitrary
+bottleneck). This is the SVM's genuine ceiling on this feature set, not
+an unlucky hyperparameter choice.
 
-*Deep model (LSTM / Attention-LSTM) results:*
+**Final three-way comparison** (all models on identical, corrected —
+log-scaled, 32-channel — features):
 
 | Model | Accuracy (subject-level, n=31) | ROC-AUC |
 |---|---|---|
-| SVM baseline (deterministic) | **0.645** | **0.661** |
-| LSTM (mean ± SD, 3 seeds) | 0.516 ± 0.055 | 0.528 ± 0.079 |
-| Attention-LSTM (mean ± SD, 3 seeds) | 0.538 ± 0.049 | 0.514 ± 0.012 |
+| SVM baseline (deterministic, best of 4 PCA settings) | 0.581 | 0.580 |
+| **LSTM** (mean ± SD, 3 seeds) | **0.667 ± 0.074** | **0.686 ± 0.075** |
+| Attention-LSTM (mean ± SD, 3 seeds) | 0.538 ± 0.049 | 0.514 ± 0.108 |
 
-**The classical baseline clearly outperforms both deep sequence
-models, which sit essentially at chance (0.50) even after fixing every
-bug that surfaced along the way** — a channel-selection bug that
-included 9 non-scalp channels in every feature vector, unseeded
-training causing results to swing arbitrarily between runs, and severe
-overfitting from too much model capacity for the data available. Once
-all three were fixed and results were averaged across 3 random seeds
-per model, the conclusion held steady: with only 31 subjects, there
-isn't enough data for an LSTM to learn anything an SVM on hand-crafted
-spectral/Hjorth features doesn't already capture. This is a legitimate
-finding, not a failure — reporting "the simple model won, honestly
-evaluated" is more credible than chasing a bigger number with a
-methodology that doesn't hold up. A fourth architecture (EEGNet) was
-considered but skipped: it's unlikely a different deep model changes a
-conclusion that's fundamentally about sample size, not architecture
-choice.
+**The LSTM wins.** This reverses an earlier (incorrect) conclusion from
+before a feature-scaling bug was fixed — see the history in
+[docs/roadmap.md](docs/roadmap.md) Phase 2/3 for the full debugging
+trail. With the bug fixed, the LSTM's ability to model temporal
+structure across each subject's ~90-140 epochs gives it real signal that
+a per-epoch hand-crafted-feature SVM can't capture. The plain LSTM beats
+the Attention-LSTM too — attention didn't help here, plausibly because
+31 subjects isn't enough data to usefully learn *which* time windows to
+attend to, on top of the base sequence-modeling task.
+
+An AUC of ~0.69 under honest LOSO validation, averaged across 3 random
+seeds, on n = 31 is a real, non-trivial result — still not remotely
+close to diagnostic reliability (see Limitations and the dataset
+curators' own caveat above), but a legitimate signal that survived
+subject-level validation, a corrected feature pipeline, and a fair
+hyperparameter search for the baseline it's being compared against.
+
+**SHAP explainability (Phase 3), on the SVM baseline:**
+
+Feature-type importance, once the log-transform fix was in place, is
+sensible and non-degenerate — beta and gamma power lead, alpha is
+lowest, all 8 feature types contribute (no more exact zeros):
+
+| Feature type | Mean \|SHAP\| |
+|---|---|
+| beta | 0.00231 |
+| gamma | 0.00191 |
+| hjorth_mobility | 0.00191 |
+| hjorth_complexity | 0.00183 |
+| hjorth_activity | 0.00171 |
+| theta | 0.00170 |
+| delta | 0.00151 |
+| alpha | 0.00110 |
+
+Top channels: O2, CP5, P8, O1, Fp2, Oz, F3, T8, AF3, Fz — occipital
+(O1/O2/Oz) and frontal (Fp2/AF3) electrodes lead, with temporal/parietal
+channels (CP5/P8/T8/F3) also present. See
+`results/shap_band_importance.png` and `results/shap_channel_topomap.png`.
+
+**Important interpretive caveat, independent of the numbers above:**
+occipital and frontal electrodes are exactly the sites most susceptible
+to two artifacts that correlate with PD status rather than reflecting
+cortical signal directly: frontal electrodes pick up residual
+eye-movement/blink signal even after ICA cleaning (and PD patients have
+documented differences in blink rate), and PD involves motor symptoms
+(tremor) that can bleed into signal amplitude/complexity measures. This
+project cannot rule out that some of the SHAP-identified importance
+reflects these confounds rather than pure cortical activity — that's an
+open question, not a settled one, and is stated here rather than
+glossed over.
 
 ## Limitations
 
