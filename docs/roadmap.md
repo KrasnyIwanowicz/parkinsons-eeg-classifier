@@ -9,7 +9,8 @@ as for anyone reviewing the repo.
 - [x] Extract features for the full dataset, save to `data/processed/`
 - [x] Get the baseline (StandardScaler → PCA → SVM) running end-to-end via `scripts/run_experiment.py`
 
-**Result: 67.7% subject-level accuracy, AUC 0.653, LOSO-validated (n=31).**
+**Result: 64.5% subject-level accuracy, AUC 0.661, LOSO-validated (n=31,
+32 scalp channels).**
 
 ## Phase 2 — Deep models + real validation
 - [x] Implement a PyTorch `Dataset`/`DataLoader` around the per-subject epoch sequences
@@ -24,9 +25,9 @@ Both deep models sit at chance. Legitimate finding: n=31 isn't enough
 data for these architectures to beat hand-crafted features + SVM.**
 
 ## Phase 3 — Explainability
-- [ ] SHAP values on the baseline model — which bands/channels matter most?
-- [ ] Attention-weight visualization on the attention-LSTM — which time windows matter most?
-- [ ] Cross-check: do both explanation methods agree on anything? That's a more interesting finding than either one alone
+- [x] SHAP values on the SVM baseline — `scripts/explain_baseline.py`, ready to run
+- [ ] ~~Attention-weight visualization on the Attention-LSTM~~ — descoped; Phase 2 found that model performs at chance, so its attention weights aren't expected to reflect a meaningful signal. Documented as a limitation instead of pursued as a result.
+- [ ] Run `scripts/explain_baseline.py` on real data, add the resulting band/channel importance + plots to the README
 
 ## Phase 4 — Rigor & polish
 - [ ] Get CI green (already scaffolded — just needs the real data-dependent tests added)

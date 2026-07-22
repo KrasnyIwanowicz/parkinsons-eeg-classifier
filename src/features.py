@@ -59,7 +59,23 @@ def extract_features(epoch_data: np.ndarray, sfreq: float) -> np.ndarray:
 
     Concatenates 5 band powers + 3 Hjorth parameters, each per channel,
     into one 1D vector of length 8 * n_channels.
+
+    Band power and Hjorth activity are both raw power-like quantities
+    (variance, or variance-derived) with heavily right-skewed
+    distributions — a handful of high-power/artifact epochs dominate the
+    raw scale, which wrecks StandardScaler's mean/std and crushes normal
+    epoch-to-epoch variation into a tiny sliver of the standardized
+    range. Log-transforming them is standard EEG feature-engineering
+    practice and is what fixed a real bug here: an earlier SHAP run
+    showed exactly 0.0 importance for every band and for hjorth_activity,
+    while mobility/complexity (already scale-invariant ratios) survived
+    -- a strong signal that raw-power skew, not "these bands don't
+    matter", explained the zeros.
     """
     powers = band_power(epoch_data, sfreq)
     activity, mobility, complexity = hjorth_parameters(epoch_data)
-    return np.concatenate(list(powers.values()) + [activity, mobility, complexity])
+
+    log_powers = [np.log10(p + 1e-20) for p in powers.values()]
+    log_activity = np.log10(activity + 1e-20)
+
+    return np.concatenate(log_powers + [log_activity, mobility, complexity])

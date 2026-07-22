@@ -145,6 +145,15 @@ pytest tests/ -v
 
 ## Results
 
+> **⚠️ Numbers below are pending a final re-run.** SHAP analysis
+> (Phase 3) uncovered a real bug in `extract_features`: band power and
+> Hjorth activity are right-skewed, outlier-dominated distributions
+> that were wrecking `StandardScaler`'s scaling — a few high-power
+> epochs were crushing normal epoch-to-epoch variation into a sliver of
+> the standardized range. Now fixed with a log-transform (see
+> `src/features.py`). Since every model uses this feature extraction,
+> all numbers below are stale until re-run on the corrected features.
+
 **Baseline (StandardScaler → PCA → SVM), leave-one-subject-out CV, n = 31,
 32 scalp EEG channels:**
 

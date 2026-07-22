@@ -6,6 +6,17 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 
 from src.evaluation import loso_cross_validate
+from src.models import build_baseline_pipeline
+
+
+def test_build_baseline_pipeline_pca_optional():
+    """n_pca_components=None must skip the PCA step entirely, not just
+    set n_components to something degenerate — this is what lets us
+    check whether PCA is bottlenecking which features reach the SVM."""
+    with_pca = build_baseline_pipeline(5)
+    without_pca = build_baseline_pipeline(None)
+    assert "pca" in dict(with_pca.steps)
+    assert "pca" not in dict(without_pca.steps)
 
 
 def _make_synthetic_epochs():

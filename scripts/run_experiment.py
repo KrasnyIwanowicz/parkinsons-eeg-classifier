@@ -28,6 +28,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bids-root", required=True, help="Path to the downloaded BIDS dataset")
     parser.add_argument("--config", default="configs/default.yaml")
+    parser.add_argument(
+        "--pca-components", type=int, default=None,
+        help="Override configs/default.yaml's model.pca_components. Use 0 to skip PCA "
+             "entirely (SVM sees all 256 standardized features directly).",
+    )
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -60,8 +65,14 @@ def main() -> None:
     y = np.array(all_labels)
     groups = np.array(all_groups)
 
+    pca_components = (
+        args.pca_components if args.pca_components is not None else cfg["model"]["pca_components"]
+    )
+    pca_components = None if pca_components == 0 else pca_components
+    print(f"PCA components: {pca_components if pca_components is not None else 'skipped'}")
+
     results = loso_cross_validate(
-        lambda: build_baseline_pipeline(cfg["model"]["pca_components"]), X, y, groups
+        lambda: build_baseline_pipeline(pca_components), X, y, groups
     )
     print(f"Epoch-level mean accuracy: {results['mean_epoch_accuracy']:.3f}")
     if results["epoch_auc"] is not None:

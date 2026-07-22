@@ -14,15 +14,22 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
 
-def build_baseline_pipeline(n_pca_components: int = 10) -> Pipeline:
-    """StandardScaler -> PCA -> SVM baseline."""
-    return Pipeline(
-        [
-            ("scale", StandardScaler()),
-            ("pca", PCA(n_components=n_pca_components, random_state=42)),
-            ("svm", SVC(kernel="rbf", probability=True, class_weight="balanced")),
-        ]
-    )
+def build_baseline_pipeline(n_pca_components: int | None = 10) -> Pipeline:
+    """StandardScaler -> [PCA] -> SVM baseline.
+
+    n_pca_components=None skips PCA entirely, so the SVM sees all 256
+    standardized features directly. Useful for checking whether PCA is
+    bottlenecking information flow — with only 10 components out of 256
+    features, PCA finds directions of maximum *variance*, which has no
+    guarantee of aligning with what's actually predictive. If a feature
+    type shows exactly zero SHAP importance with PCA on but nonzero with
+    it off, that's PCA discarding it, not genuine unimportance.
+    """
+    steps = [("scale", StandardScaler())]
+    if n_pca_components is not None:
+        steps.append(("pca", PCA(n_components=n_pca_components, random_state=42)))
+    steps.append(("svm", SVC(kernel="rbf", probability=True, class_weight="balanced")))
+    return Pipeline(steps)
 
 
 try:
