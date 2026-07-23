@@ -51,7 +51,7 @@ try:
             self.dropout = nn.Dropout(dropout)
             self.classifier = nn.Linear(hidden_dim, 1)
 
-        def forward(self, x):  # x: (batch, seq_len, input_dim)
+        def forward(self, x: "torch.Tensor") -> "torch.Tensor":  # x: (batch, seq_len, input_dim)
             _, (h_n, _) = self.lstm(x)
             return self.classifier(self.dropout(h_n[-1])).squeeze(-1)
 
@@ -68,7 +68,9 @@ try:
             self.dropout = nn.Dropout(dropout)
             self.classifier = nn.Linear(hidden_dim, 1)
 
-        def forward(self, x, return_attention: bool = False):
+        def forward(
+            self, x: "torch.Tensor", return_attention: bool = False
+        ) -> "torch.Tensor | tuple[torch.Tensor, torch.Tensor]":
             outputs, _ = self.lstm(x)  # (batch, seq_len, hidden_dim)
             scores = self.attn_score(outputs).squeeze(-1)  # (batch, seq_len)
             weights = torch.softmax(scores, dim=-1)
@@ -77,5 +79,9 @@ try:
             return (logits, weights) if return_attention else logits
 
 except ImportError:  # pragma: no cover
-    LSTMClassifier = None
-    AttentionLSTMClassifier = None
+    # Intentional fallback when torch isn't installed — the baseline
+    # (build_baseline_pipeline) has no torch dependency and should stay
+    # usable on its own. mypy flags reassigning a class name to None as
+    # a type error; that's expected here, not a bug.
+    LSTMClassifier = None  # type: ignore[assignment, misc]
+    AttentionLSTMClassifier = None  # type: ignore[assignment, misc]

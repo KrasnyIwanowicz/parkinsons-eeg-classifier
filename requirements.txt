@@ -10,3 +10,4 @@ pyyaml
 matplotlib
 seaborn
 pytest
+mypy

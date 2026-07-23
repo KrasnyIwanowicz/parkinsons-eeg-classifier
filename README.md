@@ -4,7 +4,6 @@
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-
 ## Overview
 
 Parkinson's disease (PD) is currently diagnosed through observation of
@@ -106,25 +105,31 @@ two independent ways of answering "what drove this prediction?"
 ## Repository structure
 
 ```
-├── configs/default.yaml       # all hyperparameters in one place
-├── data/                      # raw/processed data (gitignored, download separately)
-├── docs/roadmap.md            # phased project roadmap
-├── scripts/run_experiment.py  # end-to-end: load → preprocess → features → LOSO-CV
+├── configs/default.yaml            # all hyperparameters in one place
+├── data/                           # raw/processed data (gitignored, download separately)
+├── docs/roadmap.md                 # phased project roadmap + full debugging history
+├── results/                        # final SHAP plots (regeneratable intermediate results gitignored)
+├── scripts/
+│   ├── run_experiment.py           # end-to-end: load → preprocess → features → LOSO-CV (SVM baseline)
+│   ├── train_deep_model.py         # LOSO-CV for the LSTM / Attention-LSTM
+│   └── explain_baseline.py         # SHAP explainability on the SVM baseline
 ├── src/
-│   ├── data_loading.py        # BIDS/OpenNeuro loading
-│   ├── preprocessing.py       # filtering, ICA, epoching
-│   ├── features.py            # band power, Hjorth parameters
-│   ├── models.py               # baseline SVM pipeline + LSTM/Attention-LSTM
-│   ├── evaluation.py           # leave-one-subject-out CV
-│   └── explainability.py       # SHAP + attention-weight extraction
-├── tests/                      # run on synthetic EEG data — no dataset download needed for CI
-└── .github/workflows/ci.yml    # tests run automatically on every push
+│   ├── data_loading.py             # BIDS/OpenNeuro loading, channel selection
+│   ├── preprocessing.py            # filtering, ICA, epoching
+│   ├── features.py                 # band power, Hjorth parameters
+│   ├── dataset.py                  # per-subject sequence construction (for the deep models)
+│   ├── models.py                   # baseline SVM pipeline + LSTM/Attention-LSTM
+│   ├── deep_training.py            # training loop, seeding, standardization for the deep models
+│   ├── evaluation.py               # leave-one-subject-out CV
+│   └── explainability.py           # SHAP + attention-weight extraction
+├── tests/                          # 17 tests, all on synthetic data — no dataset download needed for CI
+└── .github/workflows/ci.yml        # tests + mypy run automatically on every push
 ```
 
 ## Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/parkinsons-eeg-classifier.git
+git clone https://github.com/KrasnyIwanowicz/parkinsons-eeg-classifier.git
 cd parkinsons-eeg-classifier
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
@@ -135,11 +140,19 @@ pip install -r requirements.txt
 ## Usage
 
 ```bash
-# run the full pipeline and get LOSO-validated baseline results
+# baseline: SVM on hand-crafted features, LOSO-validated
 python scripts/run_experiment.py --bids-root data/raw
 
-# run the test suite (uses synthetic data, no download needed)
+# deep models: LSTM or Attention-LSTM, LOSO-validated
+python scripts/train_deep_model.py --bids-root data/raw --model lstm --hidden-dim 16 --dropout 0.5 --weight-decay 1e-3 --n-train-epochs 10
+python scripts/train_deep_model.py --bids-root data/raw --model attention --hidden-dim 16 --dropout 0.5 --weight-decay 1e-3 --n-train-epochs 10
+
+# explainability: SHAP values + plots for the SVM baseline
+python scripts/explain_baseline.py --bids-root data/raw
+
+# test suite (synthetic data, no download needed) + type check
 pytest tests/ -v
+mypy src/ --ignore-missing-imports
 ```
 
 ## Results
@@ -205,8 +218,11 @@ lowest, all 8 feature types contribute (no more exact zeros):
 
 Top channels: O2, CP5, P8, O1, Fp2, Oz, F3, T8, AF3, Fz — occipital
 (O1/O2/Oz) and frontal (Fp2/AF3) electrodes lead, with temporal/parietal
-channels (CP5/P8/T8/F3) also present. See
-`results/shap_band_importance.png` and `results/shap_channel_topomap.png`.
+channels (CP5/P8/T8/F3) also present.
+
+![Feature-type importance](results/shap_band_importance.png)
+
+![Channel importance topomap](results/shap_channel_topomap.png)
 
 **Important interpretive caveat, independent of the numbers above:**
 occipital and frontal electrodes are exactly the sites most susceptible
@@ -237,6 +253,24 @@ glossed over.
   any analysis leaning on disease-severity labels with extra caution.
 - Not intended for, and not validated for, actual clinical diagnostic
   use.
+- **Hyperparameter search was limited, not exhaustive.** The SVM baseline
+  was checked against 4 PCA settings (0/10/30/50 components); the deep
+  models used one fixed architecture (hidden_dim=16, dropout=0.5,
+  weight_decay=1e-3) chosen to fix an overfitting problem found during
+  development, not tuned via a systematic search. The LSTM's advantage
+  over the SVM held up across all 3 seeds tried, which is reassuring,
+  but 3 seeds and one hyperparameter setting is not the same as a proper
+  sweep — a different architecture or training budget could shift these
+  numbers further.
+- **The LSTM's result carries real run-to-run variance** (0.667 ± 0.074
+  accuracy across 3 seeds — a 15-point spread from lowest to highest
+  seed). The direction of the result (LSTM > SVM > chance for
+  Attention-LSTM) was consistent across seeds, but the exact numbers
+  should be read as "roughly this good," not as a precise point estimate.
+- See the artifact-confound caveat in the Results section above
+  (occipital/frontal SHAP importance may partly reflect eye-movement or
+  tremor artifact rather than pure cortical signal) — an open question,
+  not resolved by anything in this repository.
 
 ## References
 

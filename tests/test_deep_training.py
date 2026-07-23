@@ -5,7 +5,7 @@ per-subject sequences — fast, deterministic, no real EEG needed.
 import numpy as np
 import torch
 
-from src.deep_training import predict_one, standardize_sequences, train_one_fold
+from src.deep_training import predict_one, set_seed, standardize_sequences, train_one_fold
 from src.models import AttentionLSTMClassifier, LSTMClassifier
 
 
@@ -29,6 +29,26 @@ def test_standardize_sequences_zero_means_train_features():
     assert np.allclose(all_train.std(axis=0), 1, atol=1e-3)
     # test sequence uses train statistics, not its own — shape preserved, not necessarily zero-mean
     assert test_seq["features"].shape == sequences[-1]["features"].shape
+
+
+def test_set_seed_makes_training_reproducible():
+    """Regression test for a real issue hit on the actual dataset: without
+    seeding every RNG a training run touches, two runs of the identical
+    fold produced meaningfully different predictions from random weight
+    init alone. set_seed() must cover this completely."""
+    sequences = _make_synthetic_sequences(n_subjects=6, seed=2)
+    device = torch.device("cpu")
+
+    def run_once():
+        set_seed(123)
+        train_seqs, test_seq = standardize_sequences(sequences[:-1], sequences[-1])
+        model = LSTMClassifier(input_dim=10, hidden_dim=8)
+        model = train_one_fold(
+            model, train_seqs, lr=1e-2, weight_decay=1e-4, n_train_epochs=5, device=device
+        )
+        return predict_one(model, test_seq, device)
+
+    assert run_once() == run_once()
 
 
 def test_train_one_fold_and_predict_recover_separable_signal():

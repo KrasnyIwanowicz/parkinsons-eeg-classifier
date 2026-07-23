@@ -31,7 +31,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from src.data_loading import load_dataset
 from src.dataset import build_subject_sequences
-from src.deep_training import predict_one, standardize_sequences, train_one_fold
+from src.deep_training import predict_one, set_seed, standardize_sequences, train_one_fold
 from src.models import AttentionLSTMClassifier, LSTMClassifier
 
 
@@ -62,9 +62,7 @@ def main() -> None:
              "run to run on a dataset this small.",
     )
     args = parser.parse_args()
-
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
+    set_seed(args.seed)
 
     with open(args.config) as f:
         cfg = yaml.safe_load(f)

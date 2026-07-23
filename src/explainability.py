@@ -10,7 +10,12 @@ class-relevant signal, and shouldn't be reported as if they do.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
+
+if TYPE_CHECKING:
+    import torch
 
 try:
     import shap
@@ -80,7 +85,7 @@ def aggregate_by_channel(mean_abs_shap: np.ndarray, ch_names: list[str]) -> dict
     return result
 
 
-def attention_weights_for_batch(model, x_batch) -> np.ndarray:
+def attention_weights_for_batch(model: "torch.nn.Module", x_batch: "torch.Tensor") -> np.ndarray:
     """Run the attention-LSTM in explain mode and return per-timestep
     attention weights, shape (batch, seq_len). See module docstring —
     not expected to be meaningful given Phase 2's chance-level result."""

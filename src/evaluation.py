@@ -67,22 +67,22 @@ def loso_cross_validate(model_builder, X: np.ndarray, y: np.ndarray, groups: np.
         pooled_y_prob.extend(probs)
         pooled_groups.extend(groups[test_idx])
 
-    pooled_y_true = np.asarray(pooled_y_true)
-    pooled_y_prob = np.asarray(pooled_y_prob)
-    pooled_groups = np.asarray(pooled_groups)
+    pooled_y_true_arr = np.asarray(pooled_y_true)
+    pooled_y_prob_arr = np.asarray(pooled_y_prob)
+    pooled_groups_arr = np.asarray(pooled_groups)
 
     epoch_auc = (
-        roc_auc_score(pooled_y_true, pooled_y_prob)
-        if len(np.unique(pooled_y_true)) > 1
+        roc_auc_score(pooled_y_true_arr, pooled_y_prob_arr)
+        if len(np.unique(pooled_y_true_arr)) > 1
         else None
     )
 
     # Subject-level: majority vote across each subject's out-of-fold epochs.
     subject_true, subject_pred = [], []
-    for subj in np.unique(pooled_groups):
-        mask = pooled_groups == subj
-        subject_true.append(int(pooled_y_true[mask][0]))  # one label per subject
-        subject_pred.append(int(np.round((pooled_y_prob[mask] > 0.5).mean())))
+    for subj in np.unique(pooled_groups_arr):
+        mask = pooled_groups_arr == subj
+        subject_true.append(int(pooled_y_true_arr[mask][0]))  # one label per subject
+        subject_pred.append(int(np.round((pooled_y_prob_arr[mask] > 0.5).mean())))
 
     return {
         "fold_accuracy": fold_acc,
